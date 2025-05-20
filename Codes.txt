@@ -1,0 +1,56 @@
+-Elasticsearch:
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: true
+
+xpack.security.http.ssl:
+  enabled: true
+  keystore.path: certs/http.p12
+
+xpack.security.transport.ssl:
+  enabled: true
+  verification_mode: certificate
+  keystore.path: certs/transport.p12
+  truststore.path: certs/transport.p12
+
+cluster.initial_master_nodes: ["DESKTOP-FLNSDQM"]
+
+http.host: 0.0.0.0
+
+-Kibana:
+elasticsearch.username: ""
+elasticsearch.password: ""
+-Logstash:
+
+#logstash.conf
+
+input {
+  file {
+    path => "/var/log/myapp/app.log"   # Path to your log file
+    start_position => "beginning"
+    sincedb_path => "/dev/null"        # For testing; removes persistence of read position
+  }
+}
+
+filter {
+  grok {
+    match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} \[%{LOGLEVEL:level}\] %{GREEDYDATA:msg}" }
+  }
+
+  date {
+    match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+    target => "@timestamp"
+    remove_field => ["timestamp"]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "myapp-logs-%{+YYYY.MM.dd}"
+  }
+
+  stdout { 
+    codec => rubydebug  # For debugging/log viewing in console
+  }
+}
+
